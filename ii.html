@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Birthday Countdown</title>
+    <style>
+      
+      :root {
+        --bg: #2a0018;
+        --matrix-dim: rgba(161, 19, 156, 0.18);
+        --matrix-bright: rgba(255, 120, 201, 0.95);
+        --matrix-glow: rgba(196, 34, 171, 0.65);
+        --accent: #fd7fff;
+        --text: #ffe6f6;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+      
+        background: radial-gradient(circle at 20% 20%, #521135, var(--bg));
+        overflow: hidden;
+        font-family: "JetBrains Mono", "Fira Mono", "Consolas", "Courier New",
+          monospace;
+      }
+
+
+      .stage {
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
+
+
+      canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+
+      #message {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        color: var(--text);
+        font-size: clamp(2.2rem, 7vw, 6rem);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        opacity: 0;
+        transition: opacity 0.7s ease;
+        text-shadow: 0 0 18px rgba(255, 120, 201, 0.6),
+          0 0 40px rgba(255, 120, 201, 0.4);
+      }
+
+
+      #message.show {
+        opacity: 1;
+      }
+
+
+      #open-letter {
+        position: absolute;
+        left: 50%;
+        bottom: 12vh;
+        transform: translateX(-50%);
+        padding: 0.9rem 1.8rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 120, 201, 0.6);
+        background: rgba(60, 10, 35, 0.75);
+        color: var(--text);
+        font-size: 1rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        cursor: pointer;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.6s ease, transform 0.6s ease;
+        box-shadow: 0 0 18px rgba(255, 120, 201, 0.35);
+        backdrop-filter: blur(6px);
+      }
+
+      #open-letter.show {
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateX(-50%) translateY(-6px);
+      }
+
+      #start-countdown {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 0.9rem 1.8rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 120, 201, 0.6);
+        background: rgba(60, 10, 35, 0.75);
+        color: var(--text);
+        font-size: 1rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: opacity 0.6s ease, transform 0.6s ease;
+        box-shadow: 0 0 18px rgba(255, 120, 201, 0.35);
+        backdrop-filter: blur(6px);
+        text-align: center;
+
+      }
+
+      #start-countdown.hide {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(-50%) translateY(12px);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+
+      <audio
+        id="bg-music"
+        src="多喜欢你.mp3"
+        autoplay
+        loop
+        preload="auto"
+      ></audio>
+      <canvas id="matrix"></canvas>
+      <canvas id="particles"></canvas>
+      <div id="message">Happy Birthday N'ICE</div>
+      <button id="start-countdown" type="button">Start Countdown</button>
+      <button id="open-letter" type="button">Open Letter</button>
+    </div>
+
+    <script>
+
+      const matrixCanvas = document.getElementById("matrix");
+      const matrixCtx = matrixCanvas.getContext("2d");
+      const particleCanvas = document.getElementById("particles");
+      const particleCtx = particleCanvas.getContext("2d");
+      const messageEl = document.getElementById("message");
+      const openLetterBtn = document.getElementById("open-letter");
+      const bgMusic = document.getElementById("bg-music");
+      const startCountdownBtn = document.getElementById("start-countdown");
+
+      const chars = "love";
+      const glowChars = "miss you";
+
+      let width = 0;
+      let height = 0;
+      let cols = 0;
+      let rows = 0;
+      let charSize = 18;
+      let grid = [];
+      let glowMask = [];
+
+      const offscreen = document.createElement("canvas");
+      const offCtx = offscreen.getContext("2d");
+
+      let countdown = 3;
+      let mode = "idle";
+      let lastTick = performance.now();
+
+      const countdownInterval = 1500;
+
+      const particles = [];
+      const particleCount = 160;
+
+      const resize = () => {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        matrixCanvas.width = width;
+        matrixCanvas.height = height;
+        particleCanvas.width = width;
+        particleCanvas.height = height;
+
+        charSize = Math.max(14, Math.min(22, Math.floor(width / 60)));
+        cols = Math.floor(width / charSize);
+        rows = Math.floor(height / charSize);
+        grid = new Array(cols * rows)
+          .fill(0)
+          .map(() => randomChar(chars));
+        glowMask = new Array(cols * rows).fill(false);
+
+        offscreen.width = width;
+        offscreen.height = height;
+
+        initParticles();
+        renderMask();
+      };
+
+      const randomChar = (set) => set[Math.floor(Math.random() * set.length)];
+
+      const initParticles = () => {
+        particles.length = 0;
+        for (let i = 0; i < particleCount; i += 1) {
+          particles.push({
+            x: Math.random() * width,
+            y: Math.random() * height,
+            r: 1 + Math.random() * 2.2,
+            speed: 0.6 + Math.random() * 1.8,
+            drift: -0.4 + Math.random() * 0.8,
+            alpha: 0.2 + Math.random() * 0.6,
+          });
+        }
+      };
+
+      const renderMask = () => {
+        offCtx.clearRect(0, 0, width, height);
+        if (mode === "idle") {
+          glowMask.fill(false);
+          return;
+        }
+
+        const text =
+          mode === "countdown" ? String(countdown) : "LOVEEE";
+        const fontSize =
+          mode === "countdown"
+            ? Math.min(width * 0.5, height * 0.6)
+            : Math.min(width * 0.75, height * 0.22);
+        offCtx.font = `bold ${fontSize}px "JetBrains Mono", "Fira Mono", "Consolas", "Courier New", monospace`;
+        offCtx.textAlign = "center";
+        offCtx.textBaseline = "middle";
+        offCtx.fillStyle = "#ffffff";
+        offCtx.fillText(text, width / 2, height / 2);
+
+        const image = offCtx.getImageData(0, 0, width, height).data;
+        glowMask.fill(false);
+        for (let y = 0; y < rows; y += 1) {
+          for (let x = 0; x < cols; x += 1) {
+            const px = Math.floor(x * charSize + charSize / 2);
+            const py = Math.floor(y * charSize + charSize / 2);
+            const idx = (py * width + px) * 4 + 3;
+            if (image[idx] > 40) {
+              glowMask[y * cols + x] = true;
+            }
+          }
+        }
+      };
+
+      const updateCountdown = (time) => {
+        if (mode === "idle") {
+          return;
+        }
+
+        if (time - lastTick >= countdownInterval) {
+          lastTick = time;
+          if (mode === "countdown") {
+            countdown -= 1;
+            if (countdown <= 0) {
+              mode = "message";
+              messageEl.textContent = "Happy Birthday";
+              messageEl.classList.add("show");
+              openLetterBtn.classList.add("show");
+            } else {
+              messageEl.textContent = String(countdown);
+              messageEl.classList.add("show");
+            }
+            renderMask();
+          }
+        }
+      };
+
+      const startCountdown = () => {
+        if (mode !== "idle") {
+          return;
+        }
+
+        countdown = 3;
+        mode = "countdown";
+        lastTick = performance.now();
+        messageEl.textContent = String(countdown);
+        messageEl.classList.add("show");
+        startCountdownBtn.classList.add("hide");
+        renderMask();
+      };
+
+      const drawMatrix = () => {
+        matrixCtx.clearRect(0, 0, width, height);
+        matrixCtx.fillStyle = "rgba(5, 7, 11, 0.35)";
+        matrixCtx.fillRect(0, 0, width, height);
+
+        matrixCtx.font = `${charSize}px "JetBrains Mono", "Fira Mono", "Consolas", "Courier New", monospace`;
+        matrixCtx.textAlign = "center";
+        matrixCtx.textBaseline = "middle";
+
+        for (let y = 0; y < rows; y += 1) {
+          for (let x = 0; x < cols; x += 1) {
+            const idx = y * cols + x;
+            if (Math.random() < 0.06) {
+              grid[idx] = randomChar(chars);
+            }
+
+            const px = x * charSize + charSize / 2;
+            const py = y * charSize + charSize / 2;
+
+            if (glowMask[idx]) {
+              matrixCtx.save();
+              matrixCtx.shadowColor = "rgba(255, 120, 201, 0.9)";
+              matrixCtx.shadowBlur = 18;
+              matrixCtx.fillStyle = "rgba(255, 120, 201, 0.95)";
+              matrixCtx.fillText(randomChar(glowChars), px, py);
+              matrixCtx.restore();
+            } else {
+              matrixCtx.fillStyle = "rgba(161, 19, 156, 0.18)";
+              matrixCtx.fillText(grid[idx], px, py);
+            }
+          }
+        }
+      };
+
+      const drawParticles = () => {
+        particleCtx.clearRect(0, 0, width, height);
+        particleCtx.fillStyle = "rgba(255, 255, 255, 0.75)";
+
+        for (const p of particles) {
+          particleCtx.globalAlpha = p.alpha;
+          particleCtx.beginPath();
+          particleCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          particleCtx.fill();
+
+          p.y += p.speed;
+          p.x += p.drift;
+
+          if (p.y > height + 10) {
+            p.y = -10;
+            p.x = Math.random() * width;
+          }
+          if (p.x < -20 || p.x > width + 20) {
+            p.x = Math.random() * width;
+          }
+        }
+        particleCtx.globalAlpha = 1;
+      };
+
+      
+      const loop = (time) => {
+        updateCountdown(time);
+        drawMatrix();
+        drawParticles();
+        requestAnimationFrame(loop);
+      };
+
+    
+      window.addEventListener("resize", () => {
+        resize();
+      });
+
+      
+      const musicKey = "birthday-music-time";
+
+      const playMusic = async () => {
+        const savedTime = Number(localStorage.getItem(musicKey));
+        if (!Number.isNaN(savedTime) && savedTime > 0) {
+          bgMusic.currentTime = savedTime;
+        }
+        try {
+          await bgMusic.play();
+        } catch (err) {}
+      };
+
+      playMusic();
+
+      startCountdownBtn.addEventListener("click", () => {
+        playMusic();
+        startCountdown();
+      });
+
+      
+      window.addEventListener("beforeunload", () => {
+        localStorage.setItem(musicKey, String(bgMusic.currentTime || 0));
+      });
+
+      
+      openLetterBtn.addEventListener("click", () => {
+        window.location.href = "password.html";
+      });
+
+      
+      resize();
+      requestAnimationFrame(loop);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>100100011000111100</title>
+    <link rel="stylesheet" href="iicss.css" />
+    <style> 
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(to bottom right, #f9a8d4, #f472b6, #ec4899);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .hearts {
+            position: absolute;
+            inset: 0;
+            z-index: 0;
+        }
+
+        .heart-icon {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            opacity: 0.6;
+            animation: float 4s infinite ease-in-out, pulse 2s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+            100% { transform: translateY(0px); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { 
+                opacity: 0.5; 
+                transform: scale(1); 
+            }
+            50% { 
+                opacity: 1; 
+                transform: scale(1.3); 
+            }
+        }
+
+        .envelope {
+            width: 320px;
+            height: 220px;
+            background: linear-gradient(to bottom, #fff, #f3f4f6);
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            position: relative;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            z-index: 1;
+        }
+
+        .envelope:hover {
+            transform: scale(1.05);
+        }
+
+        .flap {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 64px;
+            background: linear-gradient(to bottom, #ffe4e6, #fff0f5);
+        }
+
+        .flap::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 160px solid transparent;
+            border-right: 160px solid transparent;
+            border-top: 64px solid #fbcfe8;
+        }
+
+        .heart {
+            width: 32px;
+            height: 32px;
+            margin: 0 auto;
+            animation: pulse 1.5s infinite;
+        }
+
+        .letter {
+            display: none;
+            max-width: 400px;
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            position: relative;
+            border: 4px solid #fbcfe8;
+            animation: fadeIn 0.8s ease-out;
+            z-index: 2;
+        }
+
+        .emoji { 
+            font-size: 32px; 
+        }
+
+        @keyframes fadeIn {
+            from { 
+                opacity: 0; 
+                transform: scale(0.8); 
+            }
+            to { 
+                opacity: 1; 
+                transform: scale(1); 
+            }
+        }
+
+        .button {
+            background: linear-gradient(to right, #ec4899, #db2777);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 9999px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 16px;
+            transition: transform 0.2s ease;
+        }
+
+        .button:hover {
+            transform: scale(1.05);
+        }
+
+        .decor {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: yellow;
+            top: -12px;
+            right: -12px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .envelope-content {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .envelope-text {
+            color: #be185d;
+            font-weight: bold;
+            margin: 8px 0;
+        }
+
+        .envelope-subtitle {
+            color: #db2777;
+            margin: 4px 0;
+        }
+
+        .letter-title {
+            color: #db2777;
+            margin: 16px 0;
+        }
+
+        .letter-content {
+            line-height: 1.6;
+            margin: 12px 0;
+            color: #374151;
+        }
+
+        .special-message {
+            font-size: 12px;
+            color: #ef4444;
+            margin-top: 16px;
+            font-style: italic;
+        }
+
+        .special-message a {
+            color: inherit;
+        }
+
+        #start-music {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 18px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.25);
+            color: #ffffff;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            cursor: pointer;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.6s ease, transform 0.6s ease;
+            backdrop-filter: blur(6px);
+            z-index: 3;
+        }
+
+        #start-music.show {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(-50%) translateY(-4px);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="hearts" id="heart-container"></div>
+
+    <button id="start-music" type="button">Tap to Start Music</button>
+
+
+    <audio id="bg-music" autoplay loop preload="auto">
+        <source src="多喜欢你.mp3" type="audio/mp3" />
+    </audio>
+
+
+    <div id="envelope" class="envelope" onclick="openCard()">
+        <div class="flap"></div>
+        <div class="envelope-content">
+            <img class="heart" 
+                 src="https://cdn-icons-png.flaticon.com/512/833/833472.png" 
+                 alt="heart" />
+            <p class="envelope-text">สุขสันวันเกิด</p>
+            <p class="envelope-subtitle">น้องICE</p>
+        </div>
+    </div>
+
+
+    <div id="card" class="letter">
+        <img class="heart" 
+             src="https://cdn-icons-png.flaticon.com/512/833/833472.png" 
+             alt="heart" />
+        
+        <h1 class="letter-title">สุขสันวันเกิดน้องICE</h1>
+        <p class="letter-content">สวัสดีนะครับน้องICEเอาจริงพี่ไม่รู้ว่ามันช้าไปหรือเปล่านะแต่คงทันล่ะ!</p>
+        <p class="letter-content">ก็เผื่อน้องไม่รู้จักพี่ละกันนะครับ เออพี่ชื่อมาร์คนะครับห้อง5 ม.อะไรขอไม่บอกละกันเดี๋ยวมันจะดูอายุเยอะไปหน่อย</p>
+        <p class="letter-content">เอาจริงๆพี่ก็อวยพรใครไม่เก่งหลอกแต่ก็ขอให้วันเกิดปีนี้ของน้องiceมีความสุขมากนะครับ</p>
+        <p class="letter-content">เรียนได้เกรดตามที่หวังไว้เผื่อจะได้เอาไปยื่นพอร์ตตามคณะที่อยากเข้าเผื่อจะได้เจอพี่ที่มหาลัยเดียวกันนะถ้ามีโอกาส</p>
+        
+        <p class="special-message">
+            <a href="https://www.instagram.com/_m.a.r.k_ll?stkn=czQ0anp2OW92bGtj" target="_blank" rel="noopener noreferrer">เผื่อจำพี่ไม่ได้กดตรงก็ได้นะIG: _m.a.r.k_ll</a>
+        </p>
+        
+        <button class="button" onclick="openYouTube()">
+            ลองไปแปลเพลงนี้ดูละกันนะพี่เห็นว่าเราเรียนศิลป์ภาษาถ้าจะฟังออกนะ
+        </button>
+        
+        <div class="decor"></div>
+    </div>
+
+    <script>
+        const bgMusic = document.getElementById("bg-music");
+        const startMusicBtn = document.getElementById("start-music");
+        const musicKey = "birthday-music-time";
+
+        const playMusic = async () => {
+            const savedTime = Number(localStorage.getItem(musicKey));
+            if (!Number.isNaN(savedTime) && savedTime > 0) {
+                bgMusic.currentTime = savedTime;
+            }
+            try {
+                await bgMusic.play();
+            startMusicBtn.classList.remove("show");
+            } catch (err) {
+            startMusicBtn.classList.add("show");
+            }
+        };
+        playMusic();
+        document.addEventListener("click", () => {
+            if (bgMusic.paused) {
+                playMusic();
+            }
+        }, { once: true });
+        startMusicBtn.addEventListener("click", () => {
+            playMusic();
+        });
+        window.addEventListener("beforeunload", () => {
+            localStorage.setItem(musicKey, String(bgMusic.currentTime || 0));
+        });
+        function openCard() {
+            document.getElementById("envelope").style.display = "none";
+            document.getElementById("card").style.display = "block";
+
+            bgMusic.volume = 0.5;
+            bgMusic.play().catch(error => {
+                console.log("audio play blocked");
+            });
+        }
+
+        function openYouTube() {
+            window.open("https://open.spotify.com/track/11pYSUVcvbaLSWFP5EUNtw?si=c3986a01fe6f43d3", "_blank");
+        }
+
+        function createHearts() {
+            const heartContainer = document.getElementById("heart-container");
+            
+            for (let i = 0; i < 30; i++) {
+                const heart = document.createElement("img");
+                heart.src = "https://cdn-icons-png.flaticon.com/512/833/833472.png";
+                heart.classList.add("heart-icon");
+                heart.style.top = Math.random() * 100 + "%";
+                heart.style.left = Math.random() * 100 + "%";
+                heart.style.animationDelay = (Math.random() * 3).toFixed(2) + "s";
+                heart.style.animationDuration = (2 + Math.random() * 2).toFixed(2) + "s";
+                heartContainer.appendChild(heart);
+            }
+        }
+
+        
+        document.addEventListener('DOMContentLoaded', createHearts);
+    </script>
+</body>
+</html>
